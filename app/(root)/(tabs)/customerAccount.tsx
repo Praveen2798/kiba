@@ -34,18 +34,25 @@ type Customer = {
 const CustomerAccount = () => {
   const router = useRouter();
   const { auth } = useAuth();
+
   const [customersData, setCustomersData] = useState<Customer[]>([]);
-  const [customersFilteredData, setCustomersFilteredData] = useState<Customer[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [customersFilteredData, setCustomersFilteredData] = useState<
+    Customer[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(false); // initial load
+  const [isFetchingMore, setIsFetchingMore] = useState(false); // pagination loader
   const [isFilter, setIsFilter] = useState(false);
+
   const [offset, setOffset] = useState(0);
   const [limit] = useState(20);
   const [hasMore, setHasMore] = useState(true);
 
   const getCustomers = async () => {
-    if (isLoading || !hasMore) return;
+    if (isLoading || isFetchingMore || !hasMore) return;
 
-    setIsLoading(true);
+    if (offset === 0) setIsLoading(true);
+    else setIsFetchingMore(true);
+
     try {
       const response = await fetch(
         `${baseUrl}/customer/customer-list-web?offset=${offset}&limit=${limit}`,
@@ -61,18 +68,19 @@ const CustomerAccount = () => {
       const CustomerData = await response.json();
       const newCustomers: Customer[] = CustomerData.data;
 
-      setCustomersData(prev => [...prev, ...newCustomers]);
-      setOffset(prev => prev + newCustomers.length);
+      setCustomersData((prev) => [...prev, ...newCustomers]);
+      setOffset((prev) => prev + newCustomers.length);
 
       if (newCustomers.length < limit) setHasMore(false);
     } catch (error: any) {
       Alert.alert(
         error?.response?.data?.message ||
-        error?.message ||
-        "Error fetching customer data"
+          error?.message ||
+          "Error fetching customer data"
       );
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   };
 
@@ -114,16 +122,25 @@ const CustomerAccount = () => {
           resizeMode="cover"
         />
       ) : (
-        <View className=" w-24 h-24  p-[8px] border border-black/20 rounded-full overflow-hidden">
+        <View className="w-24 h-24 p-[8px] border border-black/20 rounded-full overflow-hidden">
           <Image
             source={icons?.farmer}
-            className="w-full h-full "
+            className="w-full h-full"
             resizeMode="contain"
           />
         </View>
       )}
     </View>
   );
+
+  // Show full-screen loader for initial load
+  if (isLoading && offset === 0) {
+    return (
+      <SafeAreaView className="flex-1 justify-center items-center bg-[#e9ecef]">
+        <ActivityIndicator size="large" color="#1b98e0" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#e9ecef] h-screen w-full">
@@ -145,8 +162,8 @@ const CustomerAccount = () => {
               customersFilteredData.length > 0
                 ? customersFilteredData
                 : isFilter
-                  ? []
-                  : customersData
+                ? []
+                : customersData
             }
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -170,13 +187,14 @@ const CustomerAccount = () => {
             keyExtractor={(item) => item._id}
             contentContainerStyle={{ paddingBottom: 250 }}
             showsVerticalScrollIndicator={false}
-            onEndReached={getCustomers} // <-- Load more when reaching end
-            onEndReachedThreshold={0.5} // trigger when 50% before end
+            onEndReached={getCustomers}
+            onEndReachedThreshold={0.5}
             ListFooterComponent={
-              isLoading ? (
+              isFetchingMore ? (
                 <ActivityIndicator
                   size="large"
-                  className="text-primary-300 mt-5"
+                  color="#1b98e0"
+                  className="mt-5"
                 />
               ) : null
             }
