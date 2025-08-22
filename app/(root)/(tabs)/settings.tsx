@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  StatusBar,
+  StatusBar
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
@@ -57,7 +57,7 @@ const Settings = () => {
             elevation: 2,
             backgroundColor: "#1b98e0",
             borderBottomWidth: 1,
-            borderBottomColor: "#e0e0e0",
+            borderBottomColor: "#e0e0e0"
           }}
         >
           <Text className="text-2xl text-white font-semibold text-center flex-1">

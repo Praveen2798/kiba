@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
-  Alert,
+  Alert
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import Search from "@/components/Search";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import icons from "@/constants/icons";
+import icons, { cultivations } from "@/constants/icons";
 import NoResults from "@/components/NoResults";
 import { baseUrl } from "@/config/Index";
 
@@ -35,34 +35,44 @@ const CustomerAccount = () => {
   const router = useRouter();
   const { auth } = useAuth();
   const [customersData, setCustomersData] = useState<Customer[]>([]);
-  const [customersFilteredData, setCustomersFilteredData] = useState<
-    Customer[]
-  >([]);
+  const [customersFilteredData, setCustomersFilteredData] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFilter, setIsFilter] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [limit] = useState(20);
+  const [hasMore, setHasMore] = useState(true);
 
   const getCustomers = async () => {
+    if (isLoading || !hasMore) return;
+
     setIsLoading(true);
     try {
-      const response = await fetch(`${baseUrl}/customer/customer-list`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.token}`,
-        },
-      });
+      const response = await fetch(
+        `${baseUrl}/customer/customer-list-web?offset=${offset}&limit=${limit}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.token}`
+          }
+        }
+      );
 
       const CustomerData = await response.json();
+      const newCustomers: Customer[] = CustomerData.data;
 
-      const customerGotData: Customer[] = CustomerData.data;
-      setCustomersData(customerGotData);
-      setIsLoading(false);
+      setCustomersData(prev => [...prev, ...newCustomers]);
+      setOffset(prev => prev + newCustomers.length);
+
+      if (newCustomers.length < limit) setHasMore(false);
     } catch (error: any) {
       Alert.alert(
         error?.response?.data?.message ||
-          error?.message ||
-          "Error fetching customer data"
+        error?.message ||
+        "Error fetching customer data"
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,28 +85,42 @@ const CustomerAccount = () => {
     firstName,
     lastName,
     city,
-    cultivation,
+    cultivation
   }: Customer) => (
-    <View className="bg-white p-4 m-2 rounded-xl flex-row justify-between items-center">
+    <View className="bg-white p-4 my-1 rounded-2xl flex-row justify-between items-center shadow-md shadow-black/10">
       <View className="flex flex-col gap-2.5">
         <Text className="text-xl font-bold max-370:text-lg">
           {firstName} {lastName}
         </Text>
         <View className="flex flex-row gap-2.5 justify-start items-center">
-          <Image source={icons.location} className="w-5 h-6" />
-          <Text className="text-sm text-gray-600">{city}</Text>
+          <Image source={icons.location} className="w-4 h-4" />
+          <Text className="text-sm text-gray-600 capitalize">{city}</Text>
         </View>
         <View className="flex flex-row gap-2.5 justify-start items-center">
-          <Image source={icons.gardener} className="w-5 h-6" />
-          <Text className="text-sm text-gray-600">{cultivation}</Text>
+          <Image
+            source={cultivations[cultivation] || ""}
+            className="w-5 h-6"
+            resizeMode="contain"
+          />
+          <Text className="text-sm text-gray-600 capitalize">
+            {cultivation}
+          </Text>
         </View>
       </View>
-      {image && (
+      {image ? (
         <Image
           source={{ uri: image }}
-          className="w-24 h-24 rounded-full mr-4"
-          resizeMode="contain"
+          className="w-24 h-24 rounded-full border border-black/20"
+          resizeMode="cover"
         />
+      ) : (
+        <View className=" w-24 h-24  p-[8px] border border-black/20 rounded-full overflow-hidden">
+          <Image
+            source={icons?.farmer}
+            className="w-full h-full "
+            resizeMode="contain"
+          />
+        </View>
       )}
     </View>
   );
@@ -111,16 +135,9 @@ const CustomerAccount = () => {
             customersData={customersData}
             setCustomersFilteredData={setCustomersFilteredData}
           />
-          <View className="flex flex-row justify-center items-center gap-2.5">
-            <Image source={icons.user} className="w-8 h-8" />
-
-            <Text className="text-base font-bold">
-              {auth?.name?.split(" ")[0] || auth?.name || "Guest"}
-            </Text>
-          </View>
         </View>
-        <View className="px-5">
-          <Text className="my-5 text-2xl font-semibold text-center">
+        <View className="px-5 flex-1">
+          <Text className="my-1 text-2xl font-semibold text-center">
             Customers
           </Text>
           <FlatList
@@ -128,15 +145,15 @@ const CustomerAccount = () => {
               customersFilteredData.length > 0
                 ? customersFilteredData
                 : isFilter
-                ? []
-                : customersData
+                  ? []
+                  : customersData
             }
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() =>
                   router.push({
                     pathname: "/account/[id]",
-                    params: { id: item._id },
+                    params: { id: item._id }
                   })
                 }
               >
@@ -151,20 +168,19 @@ const CustomerAccount = () => {
               </TouchableOpacity>
             )}
             keyExtractor={(item) => item._id}
-            contentContainerStyle={{
-              paddingBottom: 250,
-            }}
+            contentContainerStyle={{ paddingBottom: 250 }}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
+            onEndReached={getCustomers} // <-- Load more when reaching end
+            onEndReachedThreshold={0.5} // trigger when 50% before end
+            ListFooterComponent={
               isLoading ? (
                 <ActivityIndicator
                   size="large"
                   className="text-primary-300 mt-5"
                 />
-              ) : (
-                <NoResults />
-              )
+              ) : null
             }
+            ListEmptyComponent={!isLoading ? <NoResults /> : null}
           />
         </View>
       </View>

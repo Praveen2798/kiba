@@ -8,13 +8,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
-  Alert,
+  Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { baseUrl } from "@/config/Index";
+import FullImageModal from "@/components/FullImageModal";
+import icons, { cultivations } from "@/constants/icons";
 
 type Customer = {
   _id: string;
@@ -25,12 +27,15 @@ type Customer = {
   cultivation: string;
   state: string;
   city: string;
+  district?: string; // optional
   pincode: number;
   place: string;
   notes: string;
   customer: boolean;
+  trailPack?: boolean; // optional
+  ownLand?: boolean; // optional
   image?: string;
-  additionalImages?: [];
+  additionalImages?: string[]; // specify type
 };
 
 const CustomerAccount = () => {
@@ -40,6 +45,9 @@ const CustomerAccount = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
 
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
   useEffect(() => {
     if (!auth.token) {
       router.push("/");
@@ -47,7 +55,7 @@ const CustomerAccount = () => {
   }, [auth.token]);
 
   const handleBackPress = () => {
-    router.push("/customerAccount");
+    router.back();
   };
 
   const getCustomerDetails = async () => {
@@ -57,8 +65,8 @@ const CustomerAccount = () => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.token}`,
-        },
+          Authorization: `Bearer ${auth.token}`
+        }
       });
 
       const data: Customer = await response.json();
@@ -75,20 +83,22 @@ const CustomerAccount = () => {
   };
 
   useEffect(() => {
-    getCustomerDetails();
-  }, []);
+    if (auth.token && id) {
+      getCustomerDetails();
+    }
+  }, [auth.token, id]);
 
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" className="text-black" />
+        <ActivityIndicator size="large" color="black" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-[#e9ecef] h-screen w-full">
-      <StatusBar backgroundColor="#1b98e0" barStyle="dark-content" />
+      <StatusBar backgroundColor="#1b98e0" barStyle="light-content" />
       <View className="bg-[#e9ecef] h-full w-full">
         <View
           className="flex-row items-center justify-between w-full py-2.5"
@@ -100,7 +110,7 @@ const CustomerAccount = () => {
             elevation: 2,
             backgroundColor: "#1b98e0",
             borderBottomWidth: 1,
-            borderBottomColor: "#e0e0e0",
+            borderBottomColor: "#e0e0e0"
           }}
         >
           <TouchableOpacity
@@ -115,36 +125,44 @@ const CustomerAccount = () => {
         </View>
 
         <View className="p-5 w-full">
-          {customerData?.image && (
+          {customerData?.image ? (
             <Image
               source={{ uri: customerData?.image }}
               className="w-24 h-24 rounded-full mx-auto my-2.5"
-              resizeMode="contain"
+              resizeMode="cover"
             />
+          ) : (
+            <View className=" w-24 h-24 mx-auto my-2.5 bg-white p-[8px] border border-black/20 rounded-full overflow-hidden">
+              <Image
+                source={icons?.farmer}
+                className="w-full h-full "
+                resizeMode="contain"
+              />
+            </View>
           )}
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            className="w-full h-[75vh]"
+            className="w-full h-[80vh]"
             contentContainerStyle={{ paddingBottom: 50 }}
           >
             <View className="flex-col justify-between items-center gap-2.5">
               {/* First and Last Name */}
               <View className="flex flex-row justify-between items-center w-full">
-                <View className="w-[45%]">
+                <View className="w-[48%]">
                   <Text className="mb-1">First Name</Text>
                   <TextInput
-                    className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                    className="w-full h-[3rem] bg-white rounded-xl px-2"
                     placeholder="First Name"
                     value={customerData?.firstName}
                     editable={false}
                     placeholderTextColor={"#6F7789"}
                   />
                 </View>
-                <View className="w-[45%]">
+                <View className="w-[48%]">
                   <Text className="mb-1">Last Name</Text>
                   <TextInput
-                    className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                    className="w-full h-[3rem] bg-white rounded-xl px-2"
                     placeholder="Last Name"
                     value={customerData?.lastName}
                     editable={false}
@@ -155,10 +173,10 @@ const CustomerAccount = () => {
 
               {/* Mobile Number */}
               <View className="flex flex-row justify-between items-center w-full">
-                <View className="w-[45%]">
+                <View className="w-[48%]">
                   <Text className="mb-1">Mobile Number</Text>
                   <TextInput
-                    className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                    className="w-full h-[3rem] bg-white  rounded-xl px-2"
                     placeholder="Mobile Number"
                     value={customerData?.mobileNumber?.toString()}
                     editable={false}
@@ -167,10 +185,10 @@ const CustomerAccount = () => {
                 </View>
                 {/* WhatsApp Number */}
 
-                <View className="w-[45%]">
+                <View className="w-[48%]">
                   <Text className="mb-1">Whatsapp Number</Text>
                   <TextInput
-                    className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                    className="w-full h-[3rem] bg-white  rounded-xl px-2"
                     placeholder="WhatsApp Number"
                     value={customerData?.whatsappNumber?.toString()}
                     editable={false}
@@ -181,9 +199,9 @@ const CustomerAccount = () => {
 
               {/* Product */}
               <View className="w-full">
-                <Text className="mb-1">Product</Text>
+                <Text className="mb-1">Cultivation</Text>
                 <TextInput
-                  className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                  className="w-full h-[3rem] bg-white  rounded-xl px-2"
                   placeholder="Product"
                   value={customerData?.cultivation}
                   editable={false}
@@ -191,59 +209,59 @@ const CustomerAccount = () => {
                 />
               </View>
 
-              {/* Place */}
-              <View className="w-full">
-                <Text className="mb-1">Place</Text>
-                <TextInput
-                  className="w-full h-[3rem] bg-white  rounded-lg px-2"
-                  placeholder="Place"
-                  value={customerData?.place}
-                  editable={false}
-                  placeholderTextColor={"#6F7789"}
-                />
-              </View>
-
-              {/* Postal Code and City */}
+              {/* postal code and place */}
               <View className="flex flex-row justify-between items-center w-full">
-                <View className="w-[45%]">
+                <View className="w-[48%]">
                   <Text className="mb-1">Postal Code</Text>
                   <TextInput
-                    className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                    className="w-full h-[3rem] bg-white  rounded-xl px-2"
                     placeholder="Postal Code"
                     value={customerData?.pincode?.toString()}
                     editable={false}
                     placeholderTextColor={"#6F7789"}
                   />
                 </View>
-                <View className="w-[45%]">
-                  <Text className="mb-1">City</Text>
+                <View className="w-[48%]">
+                  <Text className="mb-1">Place</Text>
                   <TextInput
-                    className="w-full h-[3rem] bg-white  rounded-lg px-2"
+                    className="w-full h-[3rem] bg-white  rounded-xl px-2"
                     placeholder="City"
-                    value={customerData?.city}
+                    value={customerData?.place}
                     editable={false}
                     placeholderTextColor={"#6F7789"}
                   />
                 </View>
               </View>
 
-              {/* State */}
-              <View className="w-full">
-                <Text className="mb-1">State</Text>
-                <TextInput
-                  className="w-full h-[3rem] bg-white  rounded-lg px-2"
-                  placeholder="State"
-                  value={customerData?.state}
-                  editable={false}
-                  placeholderTextColor={"#6F7789"}
-                />
+              {/* District and State */}
+              <View className="flex flex-row justify-between items-center w-full">
+                <View className="w-[48%]">
+                  <Text className="mb-1">District</Text>
+                  <TextInput
+                    className="w-full h-[3rem] bg-white  rounded-xl px-2"
+                    placeholder="City"
+                    value={customerData?.district}
+                    editable={false}
+                    placeholderTextColor={"#6F7789"}
+                  />
+                </View>
+                <View className="w-[48%]">
+                  <Text className="mb-1">Postal Code</Text>
+                  <TextInput
+                    className="w-full h-[3rem] bg-white  rounded-xl px-2"
+                    placeholder="Postal Code"
+                    value={customerData?.state}
+                    editable={false}
+                    placeholderTextColor={"#6F7789"}
+                  />
+                </View>
               </View>
 
               {/* Notes */}
               <View className="w-full">
                 <Text className="mb-1">Notes</Text>
                 <TextInput
-                  className="w-full h-24 bg-white rounded-lg p-2"
+                  className="w-full h-24 bg-white rounded-xl p-2"
                   placeholder="Notes"
                   value={customerData?.notes}
                   editable={false}
@@ -256,7 +274,18 @@ const CustomerAccount = () => {
 
               {/* Customer Yes/No */}
               <View className="w-full flex flex-row justify-between items-center">
-                <Text className="text-xl">Sample Recieved!! Yes / No?</Text>
+                <Text className="text-xl">Sample Recieved ? Yes / No?</Text>
+                <Text
+                  className={`text-xl font-bold ${
+                    customerData?.trailPack ? "text-green-600" : "text-red-600"
+                  } `}
+                >
+                  {customerData?.trailPack ? "Yes" : "No"}
+                </Text>
+              </View>
+
+              <View className="w-full flex flex-row justify-between items-center">
+                <Text className="text-xl">Existing Customer ? Yes / No?</Text>
                 <Text
                   className={`text-xl font-bold ${
                     customerData?.customer ? "text-green-600" : "text-red-600"
@@ -266,25 +295,53 @@ const CustomerAccount = () => {
                 </Text>
               </View>
 
+              <View className="w-full flex flex-row justify-between items-center">
+                <Text className="text-xl">Own Land ? Yes / No?</Text>
+                <Text
+                  className={`text-xl font-bold ${
+                    customerData?.ownLand ? "text-green-600" : "text-red-600"
+                  } `}
+                >
+                  {customerData?.ownLand ? "Yes" : "No"}
+                </Text>
+              </View>
+
               {/* Additional Images */}
               <View className="w-full flex flex-col">
-                {customerData?.additionalImages?.length != 0 && (
-                  <Text className="text-xl font-semibold mb-2">
-                    Additional Images
-                  </Text>
-                )}
-                <View className="flex flex-row justify-start items-center gap-5">
-                  {customerData?.additionalImages &&
-                    customerData?.additionalImages
-                      .slice(0, 4)
-                      .map((image, index) => (
-                        <Image
-                          key={index}
-                          source={{ uri: image }}
-                          className="w-20 h-20 rounded-lg"
-                        />
-                      ))}
-                </View>
+                {customerData?.additionalImages &&
+                  customerData.additionalImages.length > 0 && (
+                    <>
+                      <Text className="text-xl font-semibold mb-2">
+                        Additional Images
+                      </Text>
+                      <View className="flex flex-row justify-start items-center gap-5">
+                        {customerData.additionalImages
+                          .slice(0, 4)
+                          .map((image, index) => (
+                            <TouchableOpacity
+                              key={index}
+                              onPress={() => {
+                                setSelectedImage(image);
+                                setModalVisible(true);
+                              }}
+                            >
+                              <Image
+                                source={{ uri: image }}
+                                className="w-20 h-20 rounded-lg"
+                                resizeMode="cover"
+                              />
+                            </TouchableOpacity>
+                          ))}
+                      </View>
+                    </>
+                  )}
+
+                {/* Full Image Modal */}
+                <FullImageModal
+                  visible={modalVisible}
+                  imageUri={selectedImage}
+                  onClose={() => setModalVisible(false)}
+                />
               </View>
             </View>
           </ScrollView>

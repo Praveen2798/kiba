@@ -94,15 +94,15 @@ const Search: React.FC<SearchProps> = ({
   };
 
   return (
-    <View className="flex flex-row items-center justify-between px-4 w-[65%] h-12 max-370:w-[70%] rounded-[4rem] bg-white">
+    <View className="flex flex-row items-center justify-between px-4 w-full h-12 max-370:w-[70%] rounded-[4rem] bg-white">
       <View className="flex-1 flex flex-row items-center justify-start z-50">
-        <Image source={icons.search} className="size-5" />
+        <Image source={icons.search} className="size-7" />
         <TextInput
           value={search}
           onChangeText={handleSearch}
           placeholder="Search"
           placeholderTextColor="#6F7789"
-          className="text-sm font-rubik text-black-300 ml-2 flex-1"
+          className=" font-rubik text-black-300 ml-2 flex-1"
         />
       </View>
     </View>
